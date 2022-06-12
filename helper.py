@@ -1,0 +1,22 @@
+import matplotlib.pyplot as plt
+from IPython import display
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
+plt.ion()
+
+def plot(scores, avgScores):
+    display.clear_output(wait=True)
+    display.display(plt.gcf())
+    plt.clf()
+    plt.title('Training...')
+    plt.xlabel('Number of Games')
+    plt.ylabel('Score')
+    plt.plot(scores)
+    plt.plot(avgScores)
+    plt.ylim(ymin=0)
+    plt.text(len(scores)-1, scores[-1], str(scores[-1]))
+    plt.text(len(avgScores)-1, avgScores[-1], str(avgScores[-1]))
+    plt.show(block=False)
+    plt.pause(.1)
