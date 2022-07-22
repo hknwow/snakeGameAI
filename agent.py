@@ -6,17 +6,21 @@ from snakeGame import SnakeGameAI, Direction, Point
 from model import linearQNet, qTrainer
 from helper import plot
 import os
+import time
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
-learninRate = 0.001
+
+# learninRate = 0.001
+# rndmns = 80
+# gamma = 0.9
 
 class Agent:
     
-    def __init__(self):
+    def __init__(self,learninRate,gamma):
         self.numGames = 0
         self.epsilon = 0 # randomness
-        self.gamma = 0.9 # discount rate
+        self.gamma = gamma # discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
         self.model = linearQNet(11, 256, 3) # input hidden output sizes
         self.trainer = qTrainer(self.model, learningRate=learninRate, gamma=self.gamma)
@@ -83,11 +87,11 @@ class Agent:
     def trainShortMemory(self, state, action, reward, nextState, gameOver):
         self.trainer.trainStep(state, action, reward, nextState, gameOver)
 
-    def getAction(self, state):
+    def getAction(self, state, rndmns):
         # random moves: tradeoff exploration / exploitation
-        self.epsilon = 80 - self.numGames # more games we have, the smaller epsilon will get
+        self.epsilon = rndmns - self.numGames # more games we have, the smaller epsilon will get
         finalMove = [0,0,0]
-        if random.randint(0, 200) < self.epsilon: # and smaller the epsilon will get, the less frequent random
+        if random.randint(0, 30) < self.epsilon: # and smaller the epsilon will get, the less frequent random
                                                 # epsilon become negative and then we dont longer have a random move
             move = random.randint(0, 2)
             finalMove[move] = 1
@@ -99,12 +103,16 @@ class Agent:
         
         return finalMove
 
-def train():
+def train(learninRate, gamma ,rndmns):
+    # timeout = time.time() + 300
+    allScores = []
+    gamma = gamma
+    global avgScore
     plotScore = []
     plotAvgScore = []
     totalScore = 0
     record = 0
-    agent = Agent()
+    agent = Agent(learninRate, gamma)
     # fileName='model.pth'
     # fileName = os.path.join('./model', fileName)
     # agent.model.load_state_dict(torch.load(fileName))
@@ -115,7 +123,7 @@ def train():
         stateOld = agent.getState(game)
 
         # get move
-        finalMove = agent.getAction(stateOld)
+        finalMove = agent.getAction(stateOld, rndmns)
 
         # perform move and get new state
         reward, gameOver, score = game.play_step(finalMove)
@@ -129,8 +137,11 @@ def train():
 
         if gameOver:
             # train long memory
+            allScores.append(score)
+            print("std dev: " + str(np.std(allScores)))
             game.reset()
             agent.numGames += 1
+            print(agent.numGames)
             agent.trainLongMemory()
 
             if score > record:
@@ -145,6 +156,14 @@ def train():
             avgScore = totalScore / agent.numGames
             plotAvgScore.append(avgScore)
             plot(plotScore, plotAvgScore)
+            if agent.numGames > 70:
+                if avgScore < 1.5:
+                    break
+            if agent.numGames > 320:
+                break
+    return avgScore
+    
+
 
 if __name__ == '__main__':
-    train()
+    train(0.0012, 0.53, 30)
